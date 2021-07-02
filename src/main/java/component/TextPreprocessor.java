@@ -13,6 +13,10 @@ public class TextPreprocessor {
 
 	private Set<String> stopwords = new HashSet<>();
 
+	public Set<String> getStopwords() {
+		return stopwords;
+	}
+
 	private NerTreeNode nerTreeRoot = new NerTreeNode();
 
 	public TextPreprocessor() {
@@ -95,7 +99,7 @@ public class TextPreprocessor {
 
 	}
 
-	public List<String> preprocess(String text) {
+	public Map<String, Double> preprocess(String text) {
 
 		// TODO
 		int minFreqCountForNgrams = 2;
@@ -113,7 +117,7 @@ public class TextPreprocessor {
 		System.out.println("Finished annotation for (tokenize,ssplit,pos,lemma,ner).");
 
 		// get confidences for entities
-		System.out.println("Collecting mentioned Entities...");
+		// System.out.println("Collecting mentioned Entities...");
 		for (CoreEntityMention em : document.entityMentions()) {
 			Map<String, Double> entityTypeConfidences = em.entityTypeConfidences();
 			for (Entry<String, Double> entityTypeConfidence : entityTypeConfidences.entrySet()) {
@@ -138,9 +142,11 @@ public class TextPreprocessor {
 			}
 			// System.out.println(em.text() + "\t" + em.entityTypeConfidences());
 		}
-		System.out.println("Full tree: " + nerTreeRoot);
+		// System.out.println("Full tree: " + nerTreeRoot);
 
 		List<CoreLabel> docTokens = document.tokens();
+		Integer totalDocTermCounts = docTokens.size();
+		System.out.println(String.format("totalDocTermCounts = %d", totalDocTermCounts));
 
 		// Variables for examining NER
 		Stack<String> tempTokenStack = new Stack<>();
@@ -245,15 +251,15 @@ public class TextPreprocessor {
 
 				String token = tempTokenList.get(i);
 				if (SYM_STOPWORD.equals(token)) {
-					
+
 					tempResultTokenList.addAll(potentialNGrams);
 					potentialNGrams.clear();
-					
+
 					if (repeatCount < repeatTime) {
 						tempResultTokenList.add(SYM_STOPWORD);
 					}
 					continue;
-					
+
 				}
 
 				potentialNGrams.addLast(token);
@@ -319,7 +325,63 @@ public class TextPreprocessor {
 		}
 
 		finalTokens.addAll(tempTokenList);
-		return finalTokens;
+		System.out.println("After combining 2-grams and 3-grams:");
+		System.out.println(finalTokens);
+
+		// Calculate the term count
+		Map<String, Integer> termCounts = new HashMap<>();
+		for (String token : finalTokens) {
+			Integer termCount = termCounts.get(token);
+			if (termCount == null) {
+				termCounts.put(token, Integer.valueOf(1));
+			} else {
+				termCount++;
+				termCounts.put(token, termCount);
+			}
+		}
+		System.out.println("TermCount: " + termCounts);
+
+		// Calculate term frequency
+		Map<String, Double> termFreqs = new HashMap<>();
+		for (Entry<String, Integer> termCount : termCounts.entrySet()) {
+			String token = termCount.getKey();
+			Integer count = termCount.getValue();
+			Double termFreq = (count * 1.0) / totalDocTermCounts;
+			termFreqs.put(token, termFreq);
+		}
+
+		return termFreqs;
+
+	}
+
+	public Map<String, Double> calculateInverseDocFreq(List<List<String>> docTermList) {
+
+		Map<String, Double> inverseDocFreqs = new HashMap<>();
+
+		Integer docNum = docTermList.size();
+		System.out.println(String.format("docNum: %d", docNum));
+
+		Map<String, Integer> termDocCounts = new HashMap<>();
+		for (List<String> docTerms : docTermList) {
+			for (String term : docTerms) {
+				Integer count = termDocCounts.get(term);
+				if (count == null) {
+					termDocCounts.put(term, Integer.valueOf(1));
+				} else {
+					count++;
+					termDocCounts.put(term, count);
+				}
+			}
+		}
+		
+		for (Entry<String, Integer> termDocCount : termDocCounts.entrySet()) {
+			String term = termDocCount.getKey();
+			Integer docCount = termDocCount.getValue();
+			Double inverseDocFreq = Math.log((docNum * 1.0) / docCount);
+			inverseDocFreqs.put(term, inverseDocFreq);
+		}
+
+		return inverseDocFreqs;
 
 	}
 
@@ -332,11 +394,8 @@ public class TextPreprocessor {
 				+ " New York has a beautiful maple tree garden." + " John had worked in the maple tree garden.";
 
 		System.out.println("Original: " + text);
-		List<String> tokens = preprocessor.preprocess(text);
-
-		for (String token : tokens) {
-			System.out.println(token);
-		}
+		Map<String, Double> termFreqs = preprocessor.preprocess(text);
+		System.out.println(termFreqs);
 
 	}
 
