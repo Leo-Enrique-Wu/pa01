@@ -1,4 +1,4 @@
+component/TextPreprocessor.class
 service/DescriptiveModelBuildingService.class
 leo_pa/pa01/App.class
-component/StopWordFilter.class
 service/IDescriptiveModelBuildingService.class
