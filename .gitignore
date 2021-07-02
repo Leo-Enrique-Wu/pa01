@@ -2,3 +2,5 @@ analyze/**
 target/**
 .settings/org.eclipse.jdt.core.prefs
 .classpath
+target/classes/service/DescriptiveModelBuildingService.class
+target/classes/service/IDescriptiveModelBuildingService.class
