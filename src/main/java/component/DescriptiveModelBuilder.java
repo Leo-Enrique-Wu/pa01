@@ -11,7 +11,6 @@ public class DescriptiveModelBuilder {
 
 	private TextPreprocessor textProcessor = new TextPreprocessor();
 
-	@SuppressWarnings({ "resource" })
 	public Map<String, Map<String, Double>> genDocTermMatrix() {
 
 		Map<String, Map<String, Double>> docTermMatrix = new HashMap<>();
