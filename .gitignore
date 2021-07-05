@@ -4,3 +4,4 @@ target/**
 .classpath
 target/classes/service/DescriptiveModelBuildingService.class
 target/classes/service/IDescriptiveModelBuildingService.class
+*.class

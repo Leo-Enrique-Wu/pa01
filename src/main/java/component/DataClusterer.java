@@ -104,7 +104,13 @@ public class DataClusterer {
 			}
 
 		} while (!checkStopCondition(iterCount, clusterChangedPercent));
-
+		
+		clusters = DocItem.seperateByClusterLabel(docItems);
+		while (clusters.size() < k) {
+			Set<DocItem> cluster = new HashSet<>();
+			clusters.add(cluster);
+		}
+		
 		return clusters;
 
 	}
@@ -177,7 +183,7 @@ public class DataClusterer {
 
 		// System.out.println(docTermMatrix);
 		DataClusterer clusterer = new DataClusterer();
-		SimilarityCalculator simCalculator = new EuclideanDistSimCalculator();
+		SimilarityCalculator simCalculator = new CosineSimCalculator();
 		int k = 3;
 		clusterer.clusterByKMeans(k, simCalculator, docTermMatrix);
 

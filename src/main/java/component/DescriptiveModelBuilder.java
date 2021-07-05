@@ -11,16 +11,16 @@ public class DescriptiveModelBuilder {
 
 	private TextPreprocessor textProcessor = new TextPreprocessor();
 
-	public Map<String, Map<String, Double>> genDocTermMatrix() {
+	public Map<String, Map<String, Double>> genDocTermMatrix(String srcDocRootPath, String outputFilePathStr) {
 
 		Map<String, Map<String, Double>> docTermMatrix = new HashMap<>();
 
-		// Read documents from files
-		Path currentRelativePath = Paths.get("");
-		String currentPathStr = currentRelativePath.toAbsolutePath().toString();
-		System.out.println("Current absolute path is: " + currentPathStr);
-
-		String srcDocRootPath = currentPathStr + "/analyze/src";
+//		// Read documents from files
+//		Path currentRelativePath = Paths.get("");
+//		String currentPathStr = currentRelativePath.toAbsolutePath().toString();
+//		System.out.println("Current absolute path is: " + currentPathStr);
+//
+//		String srcDocRootPath = currentPathStr + "/analyze/src";
 		File srcDocRoot = new File(srcDocRootPath);
 		File[] categoryDirs = srcDocRoot.listFiles();
 		Map<String, Map<String, Double>> articleTermFreqMap = new HashMap<>();
@@ -106,7 +106,7 @@ public class DescriptiveModelBuilder {
 
 		}
 
-		String outputFilePathStr = currentPathStr + "/analyze/output";
+//		String outputFilePathStr = currentPathStr + "/analyze/output";
 		String docTermMatrixOutputFilePathStr = outputFilePathStr + "/docTermMatrix.csv";
 		File docTermMatrixOutputFile = new File(docTermMatrixOutputFilePathStr);
 		try {
@@ -249,7 +249,15 @@ public class DescriptiveModelBuilder {
 	public static void main(String[] args) {
 
 		DescriptiveModelBuilder service = new DescriptiveModelBuilder();
-		service.genDocTermMatrix();
+		
+		Path currentRelativePath = Paths.get("");
+		String currentPathStr = currentRelativePath.toAbsolutePath().toString();
+		System.out.println("Current absolute path is: " + currentPathStr);
+
+		String srcDocRootPath = currentPathStr + "/analyze/src";
+		String outputFilePathStr = currentPathStr + "/analyze/output";
+		
+		service.genDocTermMatrix(srcDocRootPath, outputFilePathStr);
 
 	}
 
