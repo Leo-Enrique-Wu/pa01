@@ -45,6 +45,7 @@ public class ClusterPlotter {
 
 				Double freq = termFreq.getValue();
 				pointsArray[i][j] = freq;
+				j++;
 
 			}
 		}
@@ -70,8 +71,9 @@ public class ClusterPlotter {
 		}
 		RealMatrix pcaMatrix = MatrixUtils.createRealMatrix(valueMatrix);
 		RealMatrix result = realMatrix.multiply(pcaMatrix);
+		
 
-		System.out.println(result.getColumnDimension());
+//		System.out.println(result.getColumnDimension());
 
 		double[][] data2dArr = result.getData();
 		int clusterCount = 0;
@@ -139,16 +141,16 @@ public class ClusterPlotter {
 		Map<String, List<List<Double>>> lowerDimClusters = this.reduceDimByPca(n,
 				labelClusters);
 
-		for (Entry<String, List<List<Double>>> cluster : lowerDimClusters.entrySet()) {
+//		for (Entry<String, List<List<Double>>> cluster : lowerDimClusters.entrySet()) {
 
-			String label = cluster.getKey();
-			List<List<Double>> pts = cluster.getValue();
-			System.out.println("Cluster label: " + label);
-			for (List<Double> pt : pts) {
-				System.out.println(pt);
-			}
+//			String label = cluster.getKey();
+//			List<List<Double>> pts = cluster.getValue();
+//			System.out.println("Cluster label: " + label);
+//			for (List<Double> pt : pts) {
+//				System.out.println(pt);
+//			}
 
-		}
+//		}
 
 		XYChart chart = this.getChart(lowerDimClusters);
 		new SwingWrapper<XYChart>(chart).displayChart(title);
@@ -199,7 +201,7 @@ public class ClusterPlotter {
 		fr.close();
 
 		DataClusterer clusterer = new DataClusterer();
-		SimilarityCalculator simCalculator = new EuclideanDistSimCalculator();
+		SimilarityCalculator simCalculator = new CosineSimCalculator();
 		int k = 3;
 		Set<Set<DocItem>> clusters = clusterer.clusterByKMeans(k, simCalculator,
 				docTermMatrix);
@@ -230,9 +232,6 @@ public class ClusterPlotter {
 		XYChart chart = plotter.getChart(lowerDimClusters);
 		chart.setTitle("ABC");
 		new SwingWrapper<XYChart>(chart).displayChart("ABC");
-
-		chart.setTitle("DEF");
-		new SwingWrapper<XYChart>(chart).displayChart("DEF");
 
 	}
 

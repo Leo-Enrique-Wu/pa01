@@ -41,14 +41,31 @@ public class DataClusterer {
 		}
 
 		Set<DocItem> means = new HashSet<>();
-		for (int i = 0; i < k; i++) {
-			DocItem choice = docItems.get(i);
-			String clusterLabel = String.format("PC_%d", i);
+		Set<DocItem> choosedItems = new HashSet<>();
+		int clusterId = 0;
+		while (means.size() < k) {
+
+			Random rand = new Random();
+			int idx = rand.nextInt(docItems.size());
+			DocItem choice = docItems.get(idx);
+			if (choosedItems.contains(choice)) {
+				continue;
+			}
+			choosedItems.add(choice);
+
+//			String docLabel = choice.getDocLabel();
+//			if (!docLabel.endsWith("article01")) {
+//				continue;
+//			}
+
+			String clusterLabel = String.format("PC_%d", clusterId);
 			DocItem mean = new DocItem(clusterLabel, choice.getTermFreqs());
 			mean.setClusterLabel(clusterLabel);
 			means.add(mean);
-			System.out
-					.println(String.format("Choose doc[%s] to be the mean of %s", choice.getDocLabel(), clusterLabel));
+//			System.out
+//					.println(String.format("Choose doc[%s] to be the mean of %s", choice.getDocLabel(), clusterLabel));
+			clusterId++;
+
 		}
 
 		int iterCount = 0;
@@ -56,12 +73,13 @@ public class DataClusterer {
 		do {
 
 			iterCount++;
-			System.out.println("Iter " + iterCount + ":");
+//			System.out.println("Iter " + iterCount + ":");
+
 			for (DocItem docItem : docItems) {
 
 				Map<String, Double> targetAttributeValueMap = docItem.getTermFreqs();
 				List<ClusterDist> clusterDists = new ArrayList<>();
-				System.out.println(docItem.getDocLabel());
+//				System.out.println(docItem.getDocLabel());
 
 				for (DocItem mean : means) {
 					String clusterLabel = mean.getClusterLabel();
@@ -69,32 +87,55 @@ public class DataClusterer {
 					Double dist = simCalculator.calculate(targetAttributeValueMap, meanAttributeValueMap);
 					ClusterDist clusterDist = new ClusterDist(clusterLabel, dist);
 					clusterDists.add(clusterDist);
-					System.out.println(String.format("Dist(%s):%f", clusterLabel, dist));
+//					System.out.println(String.format("Dist(%s):%f", clusterLabel, dist));
 				}
 
-				Collections.sort(clusterDists, ClusterDist.getComparator());
+				if (simCalculator instanceof CosineSimCalculator) {
+					Collections.sort(clusterDists, new Comparator<ClusterDist>() {
+
+						@Override
+						public int compare(ClusterDist o1, ClusterDist o2) {
+							return (o1.getDist().compareTo(o2.getDist()) != 0)
+									? (o1.getDist().compareTo(o2.getDist()) * -1)
+									: o1.getClusterLabel().compareTo(o2.getClusterLabel());
+						}
+
+					});
+				} else {
+					Collections.sort(clusterDists, new Comparator<ClusterDist>() {
+
+						@Override
+						public int compare(ClusterDist o1, ClusterDist o2) {
+							return (o1.getDist().compareTo(o2.getDist()) != 0)
+									? o1.getDist().compareTo(o2.getDist())
+									: o1.getClusterLabel().compareTo(o2.getClusterLabel());
+						}
+
+					});
+				}
+
 				ClusterDist nearestMean = clusterDists.get(0);
 				String newClusterLabel = nearestMean.getClusterLabel();
 				docItem.setClusterLabel(newClusterLabel);
-				System.out.println(
-						String.format("cluster: %s --> %s", docItem.getOriClusterLabel(), docItem.getClusterLabel()));
+//				System.out.println(
+//						String.format("cluster: %s --> %s", docItem.getOriClusterLabel(), docItem.getClusterLabel()));
 
 			}
 
 			int changedClusterCount = 0;
 			for (DocItem docItem : docItems) {
-				String docLabel = docItem.getDocLabel();
-				String oriClusterLabel = docItem.getOriClusterLabel();
-				String clusterLabel = docItem.getClusterLabel();
+//				String docLabel = docItem.getDocLabel();
+//				String oriClusterLabel = docItem.getOriClusterLabel();
+//				String clusterLabel = docItem.getClusterLabel();
 				if (docItem.hasChangedCluster()) {
 					changedClusterCount++;
 				}
-				System.out.println(String.format("[%s] %s", docLabel,
-						(docItem.hasChangedCluster()) ? String.format("%s --> %s", oriClusterLabel, clusterLabel)
-								: clusterLabel));
+//				System.out.println(String.format("[%s] %s", docLabel,
+//						(docItem.hasChangedCluster()) ? String.format("%s --> %s", oriClusterLabel, clusterLabel)
+//								: clusterLabel));
 			}
 			clusterChangedPercent = (changedClusterCount * 1.0) / docNum;
-			System.out.println(clusterChangedPercent);
+//			System.out.println(clusterChangedPercent);
 
 			means.clear();
 			Set<Set<DocItem>> newClusters = DocItem.seperateByClusterLabel(docItems);
@@ -104,13 +145,15 @@ public class DataClusterer {
 			}
 
 		} while (!checkStopCondition(iterCount, clusterChangedPercent));
-		
+		System.out.println(String.format("Stop clustering at iter=%d, clusterChangedPercent=%f", iterCount,
+				clusterChangedPercent));
+
 		clusters = DocItem.seperateByClusterLabel(docItems);
 		while (clusters.size() < k) {
 			Set<DocItem> cluster = new HashSet<>();
 			clusters.add(cluster);
 		}
-		
+
 		return clusters;
 
 	}

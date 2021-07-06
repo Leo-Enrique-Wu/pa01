@@ -64,13 +64,23 @@ public class App {
 			e.printStackTrace();
 		}
 
+		String simCalculatorTypeStr = "";
+		if (CONFIG_SIM_CAL_COSINE.equals(simCalculatorType)) {
+			simCalculatorTypeStr = "Cosine similarity";
+		} else if (CONFIG_SIM_CAL_EUCLIDEAN.equals(simCalculatorType)) {
+			simCalculatorTypeStr = "Euclidean distance";
+		} else {
+			simCalculatorTypeStr = "Unknown";
+		}
+
 		System.out.println("Input: " + srcDocRootPath);
 		System.out.println("Output: " + outputFilePathStr);
-		System.out.println("Similarity Calculator: " + simCalculatorType);
+		System.out.println(String.format("Similarity Calculator: %s(%s)", simCalculatorType, simCalculatorTypeStr));
 
 		DescriptiveModelBuilder modelBuilder = new DescriptiveModelBuilder();
 		Map<String, Map<String, Double>> docTermMatrix = modelBuilder.genDocTermMatrix(srcDocRootPath,
 				outputFilePathStr);
+		System.out.println("Finished building the descriptive model.");
 
 		DataClusterer clusterer = new DataClusterer();
 		SimilarityCalculator simCalculator = null;
@@ -81,8 +91,10 @@ public class App {
 		}
 		int k = 3;
 		Set<Set<DocItem>> clusters = clusterer.clusterByKMeans(k, simCalculator, docTermMatrix);
+		System.out.println(String.format("Finished clustering: k = %d", k));
 
 		PerformanceEvaluator.eval(clusters);
+		System.out.println(String.format("Finished evaluating the performance", k));
 
 		ClusterPlotter plotter = new ClusterPlotter();
 		Map<String, Set<DocItem>> labelClusters = new HashMap<>();

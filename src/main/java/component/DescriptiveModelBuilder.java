@@ -16,21 +16,21 @@ public class DescriptiveModelBuilder {
 		Map<String, Map<String, Double>> docTermMatrix = new HashMap<>();
 
 //		// Read documents from files
-//		Path currentRelativePath = Paths.get("");
-//		String currentPathStr = currentRelativePath.toAbsolutePath().toString();
-//		System.out.println("Current absolute path is: " + currentPathStr);
-//
-//		String srcDocRootPath = currentPathStr + "/analyze/src";
 		File srcDocRoot = new File(srcDocRootPath);
+
 		File[] categoryDirs = srcDocRoot.listFiles();
 		Map<String, Map<String, Double>> articleTermFreqMap = new HashMap<>();
 		List<List<String>> docTermList = new ArrayList<>();
+		
+		int currentDocRowNum = 0;
+		int maxDocRowNum = 5;
 		for (File categoryDir : categoryDirs) {
 			if (categoryDir.isDirectory()) {
 
 				String dirName = categoryDir.getName();
 
 				File[] articles = categoryDir.listFiles();
+				
 				for (File article : articles) {
 
 					String articleFileName = article.getName();
@@ -43,7 +43,16 @@ public class DescriptiveModelBuilder {
 						sb.append(articleName);
 						String label = sb.toString();
 
-						System.out.println(String.format("Processing %s", label));
+						currentDocRowNum++;
+						if (currentDocRowNum == 1) {
+							System.out.print(String.format("Processing %s", label));
+						} else {
+							System.out.print(String.format(", %s", label));
+							if (currentDocRowNum == maxDocRowNum) {
+								System.out.println();
+								currentDocRowNum = 0;
+							}
+						}
 
 						FileReader fr;
 						try {
@@ -82,6 +91,7 @@ public class DescriptiveModelBuilder {
 
 			}
 		}
+		System.out.println();
 
 		Map<String, Double> inverseDocFreqMatrix = textProcessor.calculateInverseDocFreq(docTermList);
 
@@ -98,7 +108,14 @@ public class DescriptiveModelBuilder {
 				if (freq == null) {
 					tf_idf.put(term, Double.valueOf(0));
 				} else {
-					tf_idf.put(term, freq);
+
+					// TODO
+					if (freq > 0.01) {
+						tf_idf.put(term, freq);
+					} else {
+						tf_idf.put(term, Double.valueOf(0));
+					}
+
 				}
 
 			}
@@ -106,57 +123,92 @@ public class DescriptiveModelBuilder {
 
 		}
 
-//		String outputFilePathStr = currentPathStr + "/analyze/output";
-		String docTermMatrixOutputFilePathStr = outputFilePathStr + "/docTermMatrix.csv";
-		File docTermMatrixOutputFile = new File(docTermMatrixOutputFilePathStr);
-		try {
+		List<String> allZeroAttributes = new ArrayList<>();
+		Double zero = Double.valueOf(0);
+		Map<String, Double> attributeTotalFreqs = new HashMap<>();
+		Map<String, Integer> attributeTotalCounts = new HashMap<>();
+		for (String docLabel : docTermMatrix.keySet()) {
 
-			if (docTermMatrixOutputFile.exists()) {
-				docTermMatrixOutputFile.delete();
-				docTermMatrixOutputFile.createNewFile();
+			Map<String, Double> termMatrix = docTermMatrix.get(docLabel);
+			for (Entry<String, Double> termFreq : termMatrix.entrySet()) {
+
+				String term = termFreq.getKey();
+				Double freq = termFreq.getValue();
+				Double totalFreq = attributeTotalFreqs.get(term);
+				if (totalFreq == null) {
+					totalFreq = Double.valueOf(0);
+				}
+				totalFreq += freq;
+				attributeTotalFreqs.put(term, totalFreq);
+
 			}
 
-			FileWriter fw = new FileWriter(docTermMatrixOutputFile);
-			BufferedWriter bw = new BufferedWriter(fw);
-			try {
-				StringBuilder outputSb = new StringBuilder();
-				for (String term : allTerms) {
-					outputSb.append(",");
-					outputSb.append(term);
-				}
-				bw.write(outputSb.toString());
-				bw.newLine();
-				outputSb.delete(0, outputSb.length());
-
-				for (Entry<String, Map<String, Double>> docTerm : docTermMatrix.entrySet()) {
-
-					String docLable = docTerm.getKey();
-					outputSb.append(docLable);
-
-					Map<String, Double> termValueMap = docTerm.getValue();
-					for (String term : allTerms) {
-						Double value = termValueMap.get(term);
-						value = (value != null) ? value : Double.valueOf(0);
-						outputSb.append(",");
-						outputSb.append(value);
-					}
-					bw.write(outputSb.toString());
-					bw.newLine();
-					outputSb.delete(0, outputSb.length());
-
-				}
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-				bw.close();
-				fw.close();
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 
+		for (String docLabel : docTermMatrix.keySet()) {
+
+			Map<String, Double> termMatrix = docTermMatrix.get(docLabel);
+			for (Entry<String, Double> termFreq : termMatrix.entrySet()) {
+
+				String term = termFreq.getKey();
+				Double freq = termFreq.getValue();
+				if (Double.valueOf(0).compareTo(freq) == 0) {
+					continue;
+				}
+
+				Integer totalCount = attributeTotalCounts.get(term);
+				if (totalCount == null) {
+					attributeTotalCounts.put(term, Integer.valueOf(1));
+				} else {
+					totalCount++;
+					attributeTotalCounts.put(term, totalCount);
+				}
+
+			}
+
+		}
+
+		for (Entry<String, Double> attributeTotalFreq : attributeTotalFreqs.entrySet()) {
+
+			String term = attributeTotalFreq.getKey();
+			Double totalFreq = attributeTotalFreq.getValue();
+			Integer totalCount = attributeTotalCounts.get(term);
+
+			// TODO
+			if (zero.compareTo(totalFreq) == 0 || totalCount < 3) {
+//			if (zero.compareTo(totalFreq) == 0) {
+				String attribute = attributeTotalFreq.getKey();
+				allZeroAttributes.add(attribute);
+			}
+		}
+//		System.out.println("allZeroAttributes: " + allZeroAttributes);
+
+		// Filter out allZeroAttributes
+		List<String> tmpAllTerms = new ArrayList<>();
+		for (String term : allTerms) {
+			if (!allZeroAttributes.contains(term)) {
+				tmpAllTerms.add(term);
+			}
+		}
+		allTerms = tmpAllTerms;
+
+		for (String docLabel : docTermMatrix.keySet()) {
+			Map<String, Double> termMatrix = docTermMatrix.get(docLabel);
+			for (String zeroAttribute : allZeroAttributes) {
+				termMatrix.remove(zeroAttribute);
+			}
+			docTermMatrix.put(docLabel, termMatrix);
+		}
+
+		outputDocTermMatrix(outputFilePathStr, docTermMatrix, allTerms);
+		outputTopics(outputFilePathStr, docTermMatrix, categoryDirs, allTerms);
+
+		return docTermMatrix;
+
+	}
+
+	private void outputTopics(String outputFilePathStr, Map<String, Map<String, Double>> docTermMatrix,
+			File[] categoryDirs, List<String> allTerms) {
 		// Generate topics for each folder
 		String topicOutputFilePathStr = outputFilePathStr + "/topic.csv";
 		File topicOutputFile = new File(topicOutputFilePathStr);
@@ -238,25 +290,82 @@ public class DescriptiveModelBuilder {
 				fw.close();
 			}
 
+			System.out.println(
+					String.format("Output topics for each document folder: %s", topicOutputFile.getAbsolutePath()));
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
 
-		return docTermMatrix;
+	private void outputDocTermMatrix(String outputFilePathStr, Map<String, Map<String, Double>> docTermMatrix,
+			List<String> allTerms) {
 
+		String docTermMatrixOutputFilePathStr = outputFilePathStr + "/docTermMatrix.csv";
+		File docTermMatrixOutputFile = new File(docTermMatrixOutputFilePathStr);
+		try {
+
+			if (docTermMatrixOutputFile.exists()) {
+				docTermMatrixOutputFile.delete();
+				docTermMatrixOutputFile.createNewFile();
+			}
+
+			FileWriter fw = new FileWriter(docTermMatrixOutputFile);
+			BufferedWriter bw = new BufferedWriter(fw);
+			try {
+				StringBuilder outputSb = new StringBuilder();
+				for (String term : allTerms) {
+					outputSb.append(",");
+					outputSb.append(term);
+				}
+				bw.write(outputSb.toString());
+				bw.newLine();
+				outputSb.delete(0, outputSb.length());
+
+				for (Entry<String, Map<String, Double>> docTerm : docTermMatrix.entrySet()) {
+
+					String docLable = docTerm.getKey();
+					outputSb.append(docLable);
+
+					Map<String, Double> termValueMap = docTerm.getValue();
+					for (String term : allTerms) {
+						Double value = termValueMap.get(term);
+						value = (value != null) ? value : Double.valueOf(0);
+						outputSb.append(",");
+						outputSb.append(value);
+					}
+					bw.write(outputSb.toString());
+					bw.newLine();
+					outputSb.delete(0, outputSb.length());
+
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				bw.close();
+				fw.close();
+			}
+
+			System.out.println(
+					String.format("Output document-term matrix: %s", docTermMatrixOutputFile.getAbsolutePath()));
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public static void main(String[] args) {
 
 		DescriptiveModelBuilder service = new DescriptiveModelBuilder();
-		
+
 		Path currentRelativePath = Paths.get("");
 		String currentPathStr = currentRelativePath.toAbsolutePath().toString();
 		System.out.println("Current absolute path is: " + currentPathStr);
 
 		String srcDocRootPath = currentPathStr + "/analyze/src";
 		String outputFilePathStr = currentPathStr + "/analyze/output";
-		
+
 		service.genDocTermMatrix(srcDocRootPath, outputFilePathStr);
 
 	}

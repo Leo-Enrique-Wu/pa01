@@ -54,18 +54,18 @@ public class PerformanceEvaluator {
 				actualClusterLabels.add(item.getActualClusterLabel());
 			}
 		}
-		System.out.println(actualClusterLabels);
+//		System.out.println(actualClusterLabels);
 
 		List<String> actualClusterLabelList = new ArrayList<>(actualClusterLabels);
 		List<List<String>> permutations = genPermutations(actualClusterLabelList);
-		System.out.println("Permutations: " + permutations);
+//		System.out.println("Permutations: " + permutations);
 
 		List<Set<DocItem>> clusterList = new ArrayList<>(clusters);
 		int docNum = 0;
 		for (Set<DocItem> cluster : clusterList) {
 			docNum += cluster.size();
 		}
-		System.out.println("DocNum = " + docNum);
+//		System.out.println("DocNum = " + docNum);
 
 		List<PerformanceRecord> perfRecords = new ArrayList<>();
 		for (List<String> permutation : permutations) {
@@ -100,9 +100,9 @@ public class PerformanceEvaluator {
 
 		});
 
-		for (PerformanceRecord record : perfRecords) {
-			System.out.println(record);
-		}
+//		for (PerformanceRecord record : perfRecords) {
+//			System.out.println(record);
+//		}
 
 		List<String> confusionMatrixOutputs = new ArrayList<>();
 		StringBuilder confusionMatrixOutputSb = new StringBuilder();
@@ -146,9 +146,9 @@ public class PerformanceEvaluator {
 
 		}
 
-		for (String output : confusionMatrixOutputs) {
-			System.out.println(output);
-		}
+//		for (String output : confusionMatrixOutputs) {
+//			System.out.println(output);
+//		}
 
 		// Compute performance measurements(precision, recall, F1-score)
 		Map<String, PerfMeasurement> clusterPerfMeasures = new HashMap<>();
@@ -209,14 +209,14 @@ public class PerformanceEvaluator {
 
 		}
 
-		for (String output : perfOutputs) {
-			System.out.println(output);
-		}
+//		for (String output : perfOutputs) {
+//			System.out.println(output);
+//		}
 
 		// Read documents from files
 		Path currentRelativePath = Paths.get("");
 		String currentPathStr = currentRelativePath.toAbsolutePath().toString();
-		System.out.println("Current absolute path is: " + currentPathStr);
+//		System.out.println("Current absolute path is: " + currentPathStr);
 		String outputFilePathStr = currentPathStr + "/analyze/output";
 		String perfEvalOutputFilePathStr = outputFilePathStr + "/perfEval.csv";
 		File perfEvalOutputFile = new File(perfEvalOutputFilePathStr);
@@ -229,9 +229,9 @@ public class PerformanceEvaluator {
 
 			FileWriter fw = new FileWriter(perfEvalOutputFile);
 			BufferedWriter bw = new BufferedWriter(fw);
-			
+
 			try {
-				
+
 				bw.write("Confusion Matrix");
 				bw.newLine();
 				for (String output : confusionMatrixOutputs) {
@@ -239,7 +239,7 @@ public class PerformanceEvaluator {
 					bw.newLine();
 				}
 				bw.newLine();
-				
+
 				bw.write("Performance Evaluation");
 				bw.newLine();
 				for (String output : perfOutputs) {
@@ -247,14 +247,18 @@ public class PerformanceEvaluator {
 					bw.newLine();
 				}
 				bw.newLine();
-				
+
 			} catch (Exception e) {
 				e.printStackTrace();
 			} finally {
 				bw.close();
 				fw.close();
 			}
-			
+
+			System.out.println(
+					String.format("Output the confusion matrix and performance measurements: %s",
+							perfEvalOutputFile.getAbsolutePath()));
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

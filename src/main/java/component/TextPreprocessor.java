@@ -94,7 +94,8 @@ public class TextPreprocessor {
 				"exactly", "example", "going", "greetings", "hello", "help", "hopefully", "ignored", "inasmuch",
 				"indicate", "indicated", "indicates", "inner", "insofar", "it'd", "keep", "keeps", "novel",
 				"presumably", "reasonably", "second", "secondly", "sensible", "serious", "seriously", "sure", "t's",
-				"third", "thorough", "thoroughly", "three", "well", "wonder", ",", "." };
+				"third", "thorough", "thoroughly", "three", "well", "wonder", ",", ".", "]", "[", "'s", "-", "--", ")",
+				"(", "\"", ":", "...", "'", "%", "!", "$", "/", ";", "?", "good" };
 		stopwords = new HashSet<>(Arrays.asList(stopwordArr));
 
 	}
@@ -102,7 +103,7 @@ public class TextPreprocessor {
 	public Map<String, Double> preprocess(String text) {
 
 		// TODO
-		int minFreqCountForNgrams = 2;
+		int minFreqCountForNgrams = 10;
 
 		List<String> finalTokens = new ArrayList<>();
 
@@ -114,7 +115,7 @@ public class TextPreprocessor {
 		// run all Annotators on this text
 		CoreDocument document = pipeline.processToCoreDocument(text);
 		pipeline.annotate(document);
-		System.out.println("Finished annotation for (tokenize,ssplit,pos,lemma,ner).");
+//		System.out.println("Finished annotation for (tokenize,ssplit,pos,lemma,ner).");
 
 		// get confidences for entities
 		// System.out.println("Collecting mentioned Entities...");
@@ -128,10 +129,7 @@ public class TextPreprocessor {
 					continue;
 				}
 
-//				String entityType = entityTypeConfidence.getKey();
-//				NerTreeNode subNerTree = nerTreeRoot.appendChildNode(entityType, true);
 				NerTreeNode subNerTree = nerTreeRoot;
-
 				String entity = em.text();
 				String[] entityTokens = entity.split(" ");
 				for (String entityToken : entityTokens) {
@@ -145,8 +143,8 @@ public class TextPreprocessor {
 		// System.out.println("Full tree: " + nerTreeRoot);
 
 		List<CoreLabel> docTokens = document.tokens();
-		Integer totalDocTermCounts = docTokens.size();
-		System.out.println(String.format("totalDocTermCounts = %d", totalDocTermCounts));
+//		Integer totalDocTermCounts = docTokens.size();
+//		System.out.println(String.format("totalDocTermCounts = %d", totalDocTermCounts));
 
 		// Variables for examining NER
 		Stack<String> tempTokenStack = new Stack<>();
@@ -159,18 +157,32 @@ public class TextPreprocessor {
 			String lemma = token.lemma();
 			String lowerCaseStemmedWord = lemma.toLowerCase();
 
+			boolean isNumber = true;
+			try {
+				Double.valueOf(lowerCaseStemmedWord);
+			} catch (NumberFormatException e) {
+				isNumber = false;
+			}
+
+			if (this.stopwords.contains(lowerCaseStemmedWord) || isNumber) {
+
+				if (!tempTokenStack.isEmpty()) {
+					String previousToken = tempTokenStack.peek();
+					if (!SYM_STOPWORD.equals(previousToken)) {
+						tempTokenStack.add(SYM_STOPWORD);
+					}
+				}
+
+				isPotentialRegEntity = false;
+				nerTreeCurrentNode = null;
+				continue;
+			}
+
 			if (!isPotentialRegEntity) {
 
 				NerTreeNode childNode = nerTreeRoot.getChildNode(word);
 				if (childNode == null) {
-					if (this.stopwords.contains(lowerCaseStemmedWord)) {
-						String previousToken = tempTokenStack.peek();
-						if (!SYM_STOPWORD.equals(previousToken)) {
-							tempTokenStack.add(SYM_STOPWORD);
-						}
-					} else {
-						tempTokenStack.add(lowerCaseStemmedWord);
-					}
+					tempTokenStack.add(lowerCaseStemmedWord);
 				} else {
 					isPotentialRegEntity = true;
 					nerTreeCurrentNode = childNode;
@@ -185,7 +197,8 @@ public class TextPreprocessor {
 
 					// process previous tokens
 					if (nerTreeCurrentNode.getIsNerEnd()) {
-						tempTokenStack.add(nerTreeCurrentNode.getFullToken());
+						String recognizedEntity = nerTreeCurrentNode.getFullToken();
+						tempTokenStack.add(recognizedEntity.toLowerCase());
 						tempRegEntityTokens.clear();
 					} else {
 						// previous non-NER tokens
@@ -198,18 +211,11 @@ public class TextPreprocessor {
 					if (nerTreeCurrentNode == null) {
 						// current token is not a recognized entity
 						isPotentialRegEntity = false;
-						if (this.stopwords.contains(lowerCaseStemmedWord)) {
-							String previousToken = tempTokenStack.peek();
-							if (!SYM_STOPWORD.equals(previousToken)) {
-								tempTokenStack.add(SYM_STOPWORD);
-							}
-						} else {
-							tempTokenStack.add(lowerCaseStemmedWord);
-						}
+						tempTokenStack.add(lowerCaseStemmedWord);
 					} else {
 						// current token could be a recognized entity
 						// isPotentialRegEntity is still true;
-						tempRegEntityTokens.add(lowerCaseStemmedWord);
+						tempTokenStack.add(lowerCaseStemmedWord);
 					}
 
 				} else {
@@ -225,7 +231,8 @@ public class TextPreprocessor {
 
 		// Flush the buffer
 		if (nerTreeCurrentNode != null && nerTreeCurrentNode.getIsNerEnd()) {
-			tempTokenStack.add(nerTreeCurrentNode.getFullToken());
+			String recognizedEntity = nerTreeCurrentNode.getFullToken();
+			tempTokenStack.add(recognizedEntity.toLowerCase());
 			tempRegEntityTokens.clear();
 		}
 
@@ -234,8 +241,8 @@ public class TextPreprocessor {
 			tempRegEntityTokens.clear();
 		}
 
-		System.out.println("After combining recognized entities:");
-		System.out.println(tempTokenStack);
+//		System.out.println("After combining recognized entities:");
+//		System.out.println(tempTokenStack);
 
 		List<String> tempTokenList = new ArrayList<>(tempTokenStack);
 		List<String> tempResultTokenList = new ArrayList<>();
@@ -246,7 +253,7 @@ public class TextPreprocessor {
 		int repeatCount = 1;
 		for (int ngram = 2; ngram < 2 + repeatTime; ngram++, repeatCount++) {
 
-			System.out.println(String.format("Start to search for %d-grams.", ngram));
+			// System.out.println(String.format("Start to search for %d-grams.", ngram));
 			for (int i = 0; i < tempTokenList.size(); i++) {
 
 				String token = tempTokenList.get(i);
@@ -293,9 +300,9 @@ public class TextPreprocessor {
 						String nextWord = subTempTokenList.get(matchIdx + 1);
 						if (secondWord.equals(nextWord)) {
 							count++;
-							nextIdx += 2;
+							nextIdx += (matchIdx + 2);
 						} else {
-							nextIdx += 1;
+							nextIdx += matchNextIdx;
 						}
 					} else {
 						break;
@@ -325,8 +332,8 @@ public class TextPreprocessor {
 		}
 
 		finalTokens.addAll(tempTokenList);
-		System.out.println("After combining 2-grams and 3-grams:");
-		System.out.println(finalTokens);
+//		System.out.println("After combining 2-grams and 3-grams:");
+//		System.out.println(finalTokens);
 
 		// Calculate the term count
 		Map<String, Integer> termCounts = new HashMap<>();
@@ -339,14 +346,15 @@ public class TextPreprocessor {
 				termCounts.put(token, termCount);
 			}
 		}
-		System.out.println("TermCount: " + termCounts);
+		// System.out.println("TermCount: " + termCounts);
 
 		// Calculate term frequency
 		Map<String, Double> termFreqs = new HashMap<>();
+		Integer tokenNum = finalTokens.size();
 		for (Entry<String, Integer> termCount : termCounts.entrySet()) {
 			String token = termCount.getKey();
 			Integer count = termCount.getValue();
-			Double termFreq = (count * 1.0) / totalDocTermCounts;
+			Double termFreq = (count * 1.0) / tokenNum;
 			termFreqs.put(token, termFreq);
 		}
 
@@ -359,7 +367,7 @@ public class TextPreprocessor {
 		Map<String, Double> inverseDocFreqs = new HashMap<>();
 
 		Integer docNum = docTermList.size();
-		System.out.println(String.format("docNum: %d", docNum));
+		// System.out.println(String.format("docNum: %d", docNum));
 
 		Map<String, Integer> termDocCounts = new HashMap<>();
 		for (List<String> docTerms : docTermList) {
@@ -373,7 +381,7 @@ public class TextPreprocessor {
 				}
 			}
 		}
-		
+
 		for (Entry<String, Integer> termDocCount : termDocCounts.entrySet()) {
 			String term = termDocCount.getKey();
 			Integer docCount = termDocCount.getValue();
