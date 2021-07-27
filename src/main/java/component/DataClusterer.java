@@ -62,8 +62,8 @@ public class DataClusterer {
 			DocItem mean = new DocItem(clusterLabel, choice.getTermFreqs());
 			mean.setClusterLabel(clusterLabel);
 			means.add(mean);
-//			System.out
-//					.println(String.format("Choose doc[%s] to be the mean of %s", choice.getDocLabel(), clusterLabel));
+			System.out
+					.println(String.format("Choose doc[%s] to be the mean of %s as a starter", choice.getDocLabel(), clusterLabel));
 			clusterId++;
 
 		}
